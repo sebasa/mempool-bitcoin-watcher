@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  mempool-watcher:
+    build:
+      context: ../app
+      dockerfile: ../docker/Dockerfile
+    container_name: mempool-watcher
+    restart: unless-stopped
+
+    environment:
+      # ── URL de tu Mempool (ajusta la IP/host de tu Umbrel) ──
+      MEMPOOL_URL: "${MEMPOOL_URL:-http://192.168.1.x:3006}"
+
+      # ── Tu endpoint IPN que recibirá las notificaciones ──
+      WEBHOOK_URL: "${WEBHOOK_URL:-https://tu-servidor.com/ipn/bitcoin}"
+
+      # ── Secreto HMAC para verificar la firma en el receptor (opcional) ──
+      WEBHOOK_SECRET: "${WEBHOOK_SECRET:-}"
+
+      # ── Ruta interna de la BD SQLite (no cambiar si usas el volumen) ──
+      DB_PATH: "/data/watcher.db"
+
+      # ── Intervalo de polling en segundos ──
+      POLL_INTERVAL: "${POLL_INTERVAL:-30}"
+
+      # ── Timeout de requests HTTP ──
+      REQUEST_TIMEOUT: "${REQUEST_TIMEOUT:-10}"
+
+    volumes:
+      # Persistencia de la base de datos
+      - watcher_data:/data
+
+    # Acceso a la red del host (necesario si Umbrel está en la misma LAN)
+    # Alternativa: usar extra_hosts si conoces la IP
+    network_mode: bridge
+    extra_hosts:
+      - "umbrel.local:192.168.1.x"   # ← cambia a la IP real de tu Umbrel
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  watcher_data:
+    driver: local
